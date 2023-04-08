@@ -58,18 +58,17 @@ return view.extend({
       lhttps.depends("cert")
       lhttps.depends("key")
 
-      lhttps.validate=function(section_id, value) {
+      lhttps.validate = function(section_id, value) {
         let have_https_listener = false;
         let have_http_listener = false;
       
         if (lhttps && lhttps.formvalue(section_id) && (lhttps.formvalue(section_id).length > 0)) {
-          for (let i = 0; i < lhttps.formvalue(section_id).length; i++) {
-            let v = lhttps.formvalue(section_id)[i];
+          lhttps.formvalue(section_id).forEach(function(v) {
             if (v && (v !== "")) {
               have_https_listener = true;
-              break;
+              return;
             }
-          }
+          });
           if (have_https_listener && ((!cert_file) || (!cert_file.formvalue(section_id)) || (cert_file.formvalue(section_id) === ""))) {
             return [null, "must have certificate when using https"];
           }
@@ -79,25 +78,38 @@ return view.extend({
         }
       
         if (lhttp && lhttp.formvalue(section_id) && (lhttp.formvalue(section_id).length > 0)) {
-          for (let i = 0; i < lhttp.formvalue(section_id).length; i++) {
-            let v = lhttp.formvalue(section_id)[i];
+          lhttp.formvalue(section_id).forEach(function(v) {
             if (v && (v !== "")) {
               have_http_listener = true;
-              break;
+              return;
             }
-          }
+          });
         }
       
         if (!(have_http_listener || have_https_listener)) {
           return [null, "must listen on at least one address:port"];
         }
       
-        return DynamicList.validate(section_id, value);
+        return form.DynamicList.validate(section_id, value);
       }
 
-
-
+      o = ucs.taboption("general", form.Flag, "redirect_https", _("Redirect all HTTP to HTTPS"))
+      o.default = o.enabled
+      o.rmempty = false
       
+      o = ucs.taboption("general", form.Flag, "rfc1918_filter", _("Ignore private IPs on public interface"), _("Prevent access from private (RFC1918) IPs on an interface if it has an public IP address"))
+      o.default = o.enabled
+      o.rmempty = false
+      
+      cert_file = ucs.taboption("general", form.FileUpload, "cert", _("HTTPS Certificate (DER or PEM format)"))
+      
+      key_file = ucs.taboption("general", form.FileUpload, "key", _("HTTPS Private Key (DER or PEM format)"))
+      
+      o = ucs.taboption("general", form.Button, "remove_old", _("Remove old certificate and key"),
+            _("uHTTPd will generate a new self-signed certificate using the configuration shown below."))
+      o.inputstyle = "remove"
+
+
       return m.render();
     },
   });
