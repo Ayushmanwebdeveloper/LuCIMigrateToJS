@@ -3,10 +3,10 @@
 'require form';
 'require fs';
 
-var lhttp = null
-var lhttps = null
-var cert_file = null
-var key_file = null
+var lhttp = null;
+var lhttps = null;
+var cert_file = null;
+var key_file = null;
 
 
 return view.extend({
@@ -53,10 +53,10 @@ return view.extend({
       }
 
       
-      lhttps = ucs.taboption("general", form.DynamicList, "listen_https", _("HTTPS listener (address:port)"), _("Bind to specific interface:port (by specifying interface address"))
-      lhttps.datatype = "list(ipaddrport(1))"
-      lhttps.depends("cert")
-      lhttps.depends("key")
+      lhttps = ucs.taboption("general", form.DynamicList, "listen_https", _("HTTPS listener (address:port)"), _("Bind to specific interface:port (by specifying interface address"));
+      lhttps.datatype = "list(ipaddrport(1))";
+      lhttps.depends("cert");
+      lhttps.depends("key");
 
       lhttps.validate = function(section_id, value) {
         let have_https_listener = false;
@@ -93,22 +93,41 @@ return view.extend({
         return form.DynamicList.validate(section_id, value);
       }
 
-      o = ucs.taboption("general", form.Flag, "redirect_https", _("Redirect all HTTP to HTTPS"))
-      o.default = o.enabled
-      o.rmempty = false
+      o = ucs.taboption("general", form.Flag, "redirect_https", _("Redirect all HTTP to HTTPS"));
+      o.default = o.enabled;
+      o.rmempty = false;
       
-      o = ucs.taboption("general", form.Flag, "rfc1918_filter", _("Ignore private IPs on public interface"), _("Prevent access from private (RFC1918) IPs on an interface if it has an public IP address"))
-      o.default = o.enabled
-      o.rmempty = false
+      o = ucs.taboption("general", form.Flag, "rfc1918_filter", _("Ignore private IPs on public interface"), _("Prevent access from private (RFC1918) IPs on an interface if it has an public IP address"));
+      o.default = o.enabled;
+      o.rmempty = false;
       
-      cert_file = ucs.taboption("general", form.FileUpload, "cert", _("HTTPS Certificate (DER or PEM format)"))
+      cert_file = ucs.taboption("general", form.FileUpload, "cert", _("HTTPS Certificate (DER or PEM format)"));
       
-      key_file = ucs.taboption("general", form.FileUpload, "key", _("HTTPS Private Key (DER or PEM format)"))
+      key_file = ucs.taboption("general", form.FileUpload, "key", _("HTTPS Private Key (DER or PEM format)"));
       
       o = ucs.taboption("general", form.Button, "remove_old", _("Remove old certificate and key"),
             _("uHTTPd will generate a new self-signed certificate using the configuration shown below."))
       o.inputstyle = "remove"
 
+      o.write= function(section) {
+        const certFile = this.cfgvalue(section);
+        const keyFile = this.cfgvalue(section);
+      
+        if (certFile && fs.read(certFile)) {
+          fs.remove(certFile);
+        }
+      
+        if (keyFile && fs.read(keyFile)) {
+          fs.remove(keyFile);
+        }
+      
+        fs.exec('/etc/init.d/uhttpd restart', ['restart']);
+        // luci.http.redirect(luci.dispatcher.build_url("admin", "services", "uhttpd"));
+      }
+
+      o = ucs.taboption("general", Button, "remove_conf", _("Remove configuration for certificate and key"),
+	    _("This permanently deletes the cert, key, and configuration to use same."));
+      o.inputstyle = "remove";
 
       return m.render();
     },
