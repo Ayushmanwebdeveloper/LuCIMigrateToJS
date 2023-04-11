@@ -109,26 +109,57 @@ return view.extend({
             _("uHTTPd will generate a new self-signed certificate using the configuration shown below."))
       o.inputstyle = "remove"
 
-      o.write= function(section) {
-        const certFile = this.cfgvalue(section);
-        const keyFile = this.cfgvalue(section);
-      
-        if (certFile && fs.read(certFile)) {
-          fs.remove(certFile);
+      o.write= function(section_id) {
+        if (cert_file.cfgvalue(section) && fs.read(cert_file.cfgvalue(section))) {
+          fs.unlink(cert_file.cfgvalue(section));
         }
-      
-        if (keyFile && fs.read(keyFile)) {
-          fs.remove(keyFile);
+        if (key_file.cfgvalue(section) && fs.read(key_file.cfgvalue(section))) {
+          fs.unlink(key_file.cfgvalue(section));
         }
       
         fs.exec('/etc/init.d/uhttpd restart', ['restart']);
         // luci.http.redirect(luci.dispatcher.build_url("admin", "services", "uhttpd"));
       }
 
-      o = ucs.taboption("general", Button, "remove_conf", _("Remove configuration for certificate and key"),
+      o = ucs.taboption("general", form.Button, "remove_conf", _("Remove configuration for certificate and key"),
 	    _("This permanently deletes the cert, key, and configuration to use same."));
       o.inputstyle = "remove";
+      
+      o.write=function(section_id){
+        if (cert_file.cfgvalue(section) && fs.read(cert_file.cfgvalue(section))) {
+          fs.unlink(cert_file.cfgvalue(section));
+        }
+        if (key_file.cfgvalue(section) && fs.read(key_file.cfgvalue(section))) {
+          fs.unlink(key_file.cfgvalue(section));
+        }
+        uci.unset('uhttpd', section_id, 'cert');
+        uci.unset('uhttpd', section_id, 'key');
+        uci.unset('uhttpd', section_id, 'listen_https');
+        // luci.http.redirect(luci.dispatcher.build_url("admin", "services", "uhttpd"))
+     }
 
-      return m.render();
+     o = ucs.taboption("server", DynamicList, "index_page", _("Index page(s)"), _("E.g specify with index.html and index.php when using PHP"));
+     o.optional = true;
+     o.placeholder = "index.html";
+     
+     o = ucs.taboption("server", DynamicList, "interpreter", _("CGI filetype handler"), _("Interpreter to associate with file endings ('suffix=handler', e.g. '.php=/usr/bin/php-cgi')"));
+     o.optional = true;
+     
+     o = ucs.taboption("server", Flag, "no_symlinks", _("Do not follow symlinks outside document root"));
+     o.optional = true;
+     
+     o = ucs.taboption("server", Flag, "no_dirlists", _("Do not generate directory listings."));
+     o.default = o.disabled;
+     
+     o = ucs.taboption("server", DynamicList, "alias", _("Aliases"), _("(/old/path=/new/path) or (just /old/path which becomes /cgi-prefix/old/path)"));
+     o.optional = true;
+     
+     o = ucs.taboption("server", Value, "realm", _("Realm for Basic Auth"));
+     o.optional = true;
+     o.placeholder = window.location.hostname||"OpenWrt";
+
+
+
+    return m.render();
     },
   });
